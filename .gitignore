@@ -1,0 +1,5 @@
+venv_scrabble/
+config.py
+__pychache__/
+*.pyc
+*_temp.py

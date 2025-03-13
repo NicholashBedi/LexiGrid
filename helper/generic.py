@@ -1,0 +1,9 @@
+import config
+
+
+def two_d_to_one_d_coordinate(row, col):
+        return row * config.BOARD_HEIGHT + col
+
+# Returns row then column
+def one_d_to_two_d_coordinate(one_d):
+    return one_d // config.BOARD_HEIGHT, one_d % config.BOARD_HEIGHT
