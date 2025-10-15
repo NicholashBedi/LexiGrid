@@ -21,7 +21,7 @@ class Word:
             if self.start_col + size - 1 >= config.BOARD_WIDTH: # minus 1 for current letter
                 return False
         else:
-            if self.start_row + size - 1 >= config.BOARD_WIDTH:
+            if self.start_row + size - 1 >= config.BOARD_HEIGHT:
                 return False
         return True
     

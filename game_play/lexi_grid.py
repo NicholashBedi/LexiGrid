@@ -44,9 +44,42 @@ class LexiGrid:
         played_word = PlayedWord(word, row, col, is_horizontal)
         player = self.players[self.current_player_idx]
 
+        center_row = config.BOARD_HEIGHT // 2
+        center_col = config.BOARD_WIDTH // 2
+        if self.board.get_tile(center_row, center_col).letter is None and not any(
+            (r == center_row and c == center_col) for r, c, _ in played_word.iterate_word_positions()
+        ):
+            print("❌ First move must cover the center tile.")
+            return False
+
         if not played_word.get_scoring_tiles(self.board):
             print(f"❌ '{played_word.word}' does not fit on the board")
             return False
+
+        board_has_tiles = False
+        for row_tiles in self.board.grid:
+            for tile in row_tiles:
+                if tile.letter is not None:
+                    board_has_tiles = True
+                    break
+            if board_has_tiles:
+                break
+        if board_has_tiles:
+            touches_existing = False
+            for r, c, _, is_played_letter in played_word.iterate_word_positions_and_is_played():
+                if not is_played_letter:
+                    touches_existing = True
+                    break
+                for nr, nc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)):
+                    if 0 <= nr < config.BOARD_HEIGHT and 0 <= nc < config.BOARD_WIDTH:
+                        if self.board.get_tile(nr, nc).letter is not None:
+                            touches_existing = True
+                            break
+                if touches_existing:
+                    break
+            if not touches_existing:
+                print("❌ Word must connect to existing tiles.")
+                return False
         
         played_word.display_played_word_info()
 
@@ -149,17 +182,18 @@ class LexiGrid:
         word, _, _, _ = prev_move
 
         challenge_result = not self.dictionary.check_word(word)
-        print(f"{word} is {'' if challenge_result else 'not '}a valid word")
+        print(f"{word} is {'not ' if challenge_result else ''}a valid word")
         return challenge_result
 
     def make_move(self, move):
         self.previous_moves[self.turn][self.current_player_idx] = move
         player_name =  self.players[self.current_player_idx].name
+        print(f"\n{player_name}'s move is: {move if move != 'SKIP' else 'SKIP TURN'}")
         if move is None:
             print(f"{player_name} passes their turn.")
             self.pass_turn()
         
-        if move == "SKIP":
+        if move in ["SKIP", "PASS"]:
             print(f"{player_name} turn is skiped!")
             self.pass_turn()
         
@@ -169,16 +203,78 @@ class LexiGrid:
             if challenge_result is None:
                 return "retry"
             elif challenge_result:
-                pass
-                #TODO
+                # Successful challenge: undo previous player's last move
+                if self.current_player_idx == 0:
+                    challenge_turn = self.turn - 1
+                    challenge_idx = self.num_players - 1
+                else:
+                    challenge_turn = self.turn
+                    challenge_idx = self.current_player_idx - 1
+
+                prev_player = self.players[challenge_idx]
+
+                # Remove tiles placed by the previous player on that turn and return to their rack
+                returned_letters = []
+                for r in range(config.BOARD_HEIGHT):
+                    for c in range(config.BOARD_WIDTH):
+                        tile = self.board.get_tile(r, c)
+                        if tile.letter is not None and tile.placed_by == prev_player and tile.turn_placed == challenge_turn:
+                            returned_letters.append(tile.letter)
+                            tile.letter = None
+                            tile.placed_by = None
+                            tile.turn_placed = None
+
+                if returned_letters:
+                    prev_player.rack.extend(returned_letters)
+
+                # Revert score from that move (last entry corresponds to most recent play)
+                if prev_player.score_history:
+                    last_turn_score = prev_player.score_history[-1]
+                    if isinstance(last_turn_score, TurnScore):
+                        prev_player.current_score -= last_turn_score.total_score
+                        prev_player.score_history[-1].score_successfully_challenged()
+                    else:
+                        raise Exception("Last turn score is not a TurnScore instance")
+
+                # Mark the challenged move as void (treated like a pass)
+                try:
+                    self.previous_moves[challenge_turn][challenge_idx] = None
+                except Exception:
+                    pass
+
+                print(f"✅ Challenge successful. Reverted {prev_player.name}'s last move.")
+                # Keep current player's turn (challenger continues to play)
             else:
-                pass
-                #TODO
+                # Failed challenge: challenger loses their turn and cannot re-challenge same move
+                if self.current_player_idx == 0:
+                    challenge_turn = self.turn - 1
+                    challenge_idx = self.num_players - 1
+                else:
+                    challenge_turn = self.turn
+                    challenge_idx = self.current_player_idx - 1
+
+                # # Mark that the previous move was challenged and validated
+                # try:
+                #     self.previous_moves[challenge_turn][challenge_idx] = "CHALLENGE"
+                # except Exception:
+                #     pass
+
+                # Challenger loses current turn
+                self.players[self.current_player_idx].skip_next_turn = True
+                print("❌ Challenge failed. You lose this turn.")
+                self.pass_turn()
+        elif isinstance(move, tuple):
+            if len(move) == 4:
+                word, grid_row, grid_col, direction = move
+                if not self.place_word(word, grid_row, grid_col, direction == "H"):
+                    print("❌ Invalid move. Try again.")
+                    return "retry"  # Retry same player
+            else:
+                print("❌ Invalid move format. Try again.")
+                return "retry"
         else:
-            word, grid_row, grid_col, direction = move
-            if not self.place_word(word, grid_row, grid_col, direction == "H"):
-                print("❌ Invalid move. Try again.")
-                return "retry"  # Retry same player
+            print("❌ Invalid move. Try again.")
+            return "retry"
         
         # Check if game should end
         if self.tile_bag.is_empty() and all(len(p.rack) == 0 for p in self.players):
@@ -193,7 +289,7 @@ class LexiGrid:
             prev_player_idx = self.num_players - 1
         else:
             prev_player_idx = self.current_player_idx - 1
-        return self.players[prev_player_idx].name, [self.players[i] for i in range(self.num_players) if i != prev_player_idx]
+        return self.players[prev_player_idx].name.upper(), [self.players[i].name.upper() for i in range(self.num_players) if i != prev_player_idx]
     
     def get_player_input(self, player):
         print(f"\n{player.name}'s turn. Rack: {' '.join(player.rack)}")
@@ -203,19 +299,11 @@ class LexiGrid:
             if user_input == "PASS":
                 return None
             if user_input.startswith("CHALLENGE"):
-                if len(user_input.split()) != 2:
-                    print("Input should be in the following format: CHALLLENGE PLAYERS_NAME")
-                    print(f"Input recived was: {user_input}")
-                    continue
-                _, player_who_challenged = user_input.split()
-                prev_player, other_players = self.get_prev_player_and_other_players()
-                if player_who_challenged == prev_player:
+                prev_player, _ = self.get_prev_player_and_other_players()
+                if player.name.upper() == prev_player:
                     print(f"Cannot challenge your own move {prev_player}")
                     continue
-                if player_who_challenged not in other_players:
-                    print(f"{player_who_challenged} is not a valid name, please use one of these values: {', '.join(other_players)}")
-                    continue
-                return "CHALLENGE", player_who_challenged
+                return "CHALLENGE"
             
             try:
                 split_input = user_input.split()
@@ -228,6 +316,10 @@ class LexiGrid:
                 else:
                     raise ValueError("Wrong number of inputs. Please have spaces between each input")
                 row = int(row)  # Convert row to an integer
+                if direction in ["RIGHT", "R", "HORIZONTAL"]:
+                    direction = "H"
+                elif direction in ["DOWN", "D", "VERTICAL"]:
+                    direction = "V"
                 if direction not in ["H", "V"]:
                     raise ValueError("Direction must be 'H' or 'V'.")
                 return word, row, col, direction

@@ -30,3 +30,8 @@ class TurnScore:
         if self.is_bingo:
             print(f"+50 Bingo Bonus")
         print(f"🏆 Total Turn Score: {self.total_score}\n")
+    
+    def score_successfully_challenged(self):
+        self.is_bingo = False
+        self.total_score = 0
+        self.scored_words = {}

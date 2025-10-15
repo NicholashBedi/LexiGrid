@@ -20,6 +20,7 @@ def play_game():
         player = game.players[game.current_player_idx]
         if player.skip_next_turn:
             game.make_move('SKIP')
+            player.skip_next_turn = False
             continue
 
         # Show the board and current player's rack
