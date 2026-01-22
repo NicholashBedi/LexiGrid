@@ -31,6 +31,11 @@ class LexiGridTile:
         self.turn_placed = turn
         return True  # Successfully placed
 
+    def clear(self):
+        self.letter = None
+        self.placed_by = None
+        self.turn_placed = None
+
     def __str__(self):
         if self.letter:
             return Style.BRIGHT + Fore.WHITE + self.letter

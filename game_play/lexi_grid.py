@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 import random
 import string
-from colorama import Fore, Style, init
+from typing import Optional, Tuple
 
 import config
 from game_play.board import Board
@@ -11,26 +11,42 @@ from game_play.scoring import TurnScore
 from game_play.tile import LexiGridTile, TileBag
 from game_play.word import PlayedWord, ScoredWord
 from game_play.dictionary import Dictionary
-from helper.generic import two_d_to_one_d_coordinate
+from helper.generic import char_to_num, two_d_to_one_d_coordinate
 from helper.text_output import center_colored_text
 
 class LexiGrid:
-    def __init__(self, players: list[Player], shuffle_players = True, debug = False):
-        self.board = Board()
-        self.tile_bag = TileBag()
-        self.dictionary = Dictionary()
-        self.players = players
+    def __init__(
+        self,
+        players: list[Player],
+        shuffle_players: bool = True,
+        debug: bool = False,
+        board: Optional[Board] = None,
+        tile_bag: Optional[TileBag] = None,
+        dictionary: Optional[Dictionary] = None,
+        auto_refill: bool = True,
+        starting_turn: int = 0,
+        starting_player_idx: int = 0,
+    ):
+        self.board = board if board is not None else Board()
+        self.tile_bag = tile_bag if tile_bag is not None else TileBag()
+        self.dictionary = dictionary if dictionary is not None else Dictionary()
+        self.players = players[:]
         if shuffle_players:
             random.shuffle(self.players)
+        self.num_players = len(self.players)
+        self.turn = max(0, starting_turn)
         self.current_player_idx = 0
-        self.turn = 0
-        self.num_players = len(players)
-        self.previous_moves = [[None] * self.num_players]
+        if self.num_players:
+            self.current_player_idx = starting_player_idx % self.num_players
+        self.previous_moves = [[None] * self.num_players for _ in range(self.turn + 1)]
+        if not self.previous_moves:
+            self.previous_moves = [[None] * self.num_players]
+        self.last_turn_score: Optional[TurnScore] = None
 
         for player in self.players:
             if debug:
                 player._debug_add_many_letters()
-            else:
+            elif auto_refill:
                 player.refill_rack(self.tile_bag)
     
     def pass_turn(self):
@@ -40,9 +56,10 @@ class LexiGrid:
     
     def place_word(self, word: string, row_plus_one: int, char_col, is_horizontal: bool):
         row = row_plus_one - 1
-        col = ord(char_col.upper()) - ord('A')
+        col = char_to_num(char_col) - 1
         played_word = PlayedWord(word, row, col, is_horizontal)
         player = self.players[self.current_player_idx]
+        self.last_turn_score = None
 
         center_row = config.BOARD_HEIGHT // 2
         center_col = config.BOARD_WIDTH // 2
@@ -147,6 +164,7 @@ class LexiGrid:
         turn_score.apply_bingo_bonus(is_bingo)
 
         player.add_score(turn_score)
+        self.last_turn_score = turn_score
         turn_score.print_score_summary(player.name)
     
     def print_scores(self):
@@ -157,9 +175,15 @@ class LexiGrid:
     def get_board(self):
         return self.board
 
+    def load_board_state(self, state, placed_by=None, turn=None, empty_char="."):
+        self.board.load_state(state, placed_by=placed_by, turn=turn, empty_char=empty_char)
+
+    def export_board_state(self, empty_char="."):
+        return self.board.export_state(empty_char=empty_char)
+
     def display_board(self):
         self.board.display()
-    
+
     def resolve_challenge(self):
         if self.current_player_idx == 0:
             if self.turn == 0:
@@ -185,7 +209,9 @@ class LexiGrid:
         print(f"{word} is {'not ' if challenge_result else ''}a valid word")
         return challenge_result
 
-    def make_move(self, move):
+    def make_move(self, move: Tuple | str | None) -> str:
+        while len(self.previous_moves) <= self.turn:
+            self.previous_moves.append([None] * self.num_players)
         self.previous_moves[self.turn][self.current_player_idx] = move
         player_name =  self.players[self.current_player_idx].name
         print(f"\n{player_name}'s move is: {move if move != 'SKIP' else 'SKIP TURN'}")
@@ -320,7 +346,7 @@ class LexiGrid:
                     direction = "H"
                 elif direction in ["DOWN", "D", "VERTICAL"]:
                     direction = "V"
-                if direction not in ["H", "V"]:
+                else:
                     raise ValueError("Direction must be 'H' or 'V'.")
                 return word, row, col, direction
             except ValueError:

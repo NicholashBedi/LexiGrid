@@ -41,3 +41,50 @@ class Board:
             "placed_by": tile.placed_by,
             "turn_placed": tile.turn_placed
         }
+
+    def clear_letters(self):
+        for row in self.grid:
+            for tile in row:
+                tile.clear()
+
+    def load_state(self, state, placed_by=None, turn=None, empty_char="."):
+        """
+        Populate the board with letters from the provided state.
+        `state` can be a list of strings, a list of iterables, or a dict mapping (row, col) -> letter.
+        """
+        self.clear_letters()
+
+        if isinstance(state, dict):
+            items = state.items()
+        else:
+            if len(state) != config.BOARD_HEIGHT:
+                raise ValueError(f"Expected {config.BOARD_HEIGHT} rows, got {len(state)}")
+            items = []
+            for row_idx, row_values in enumerate(state):
+                if len(row_values) != config.BOARD_WIDTH:
+                    raise ValueError(f"Row {row_idx} expected length {config.BOARD_WIDTH}, got {len(row_values)}")
+                for col_idx, value in enumerate(row_values):
+                    items.append(((row_idx, col_idx), value))
+
+        for (row, col), value in items:
+            if not (0 <= row < config.BOARD_HEIGHT and 0 <= col < config.BOARD_WIDTH):
+                raise ValueError(f"Coordinate ({row}, {col}) out of bounds")
+            if value is None:
+                continue
+            if isinstance(value, str):
+                value = value.strip()
+            if not value or value == empty_char:
+                continue
+            tile = self.get_tile(row, col)
+            tile.letter = value.upper()
+            tile.placed_by = placed_by
+            tile.turn_placed = turn
+
+    def export_state(self, empty_char="."):
+        """
+        Return a list of strings representing the board letters.
+        """
+        return [
+            "".join(tile.letter if tile.letter is not None else empty_char for tile in row)
+            for row in self.grid
+        ]
