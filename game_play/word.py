@@ -34,11 +34,6 @@ class Word:
     def get_set_value(self):
         return (-1 if self.is_horizontal else 1) * two_d_to_one_d_coordinate(self.start_row, self.start_col)
 
-class ScoredChallenge:
-    def __init__(self, is_successful_challenge, challenged_who_idx, turn):
-        self.is_successful_challenge = is_successful_challenge
-        self.challenged_who_idx = challenged_who_idx
-        self.turn = turn
 
 class ScoredWord(Word):
     def __init__(self, word, start_row, start_col, is_horizontal, bonuses):

@@ -321,6 +321,7 @@ class LexiGrid:
             return MoveResult.NEXT
         # Should not reach here
         raise ValueError(f"❌ Invalid move action {move.action}. Try again - Should not be here - reached end of make_move()?")
+        
 
 if __name__ == "__main__":
     
