@@ -71,6 +71,28 @@ class Player:
         self.score_history.append(turn_score)
         self.current_score += turn_score.total_score
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "email": self.email,
+            "rack": self.rack[:],
+            "score_history": [score.to_dict() for score in self.score_history],
+            "current_score": self.current_score,
+            "is_skip_next_turn": self.is_skip_next_turn
+        }
+
+    @classmethod
+    def from_dict(self, d: dict):
+        player = Player(d.get("email"), d.get("name"))
+        player.rack = list(d.get("rack", []))
+        player.score_history = [TurnScore.from_dict(s) for s in d.get("score_history", [])]
+        if "current_score" in d:
+            player.current_score = d.get("current_score", 0)
+        else:
+            player.current_score = sum(score.total_score for score in player.score_history)
+        player.is_skip_next_turn = d.get("is_skip_next_turn", False)
+        return player
+
     def __str__(self):
         return f"{self.name}'s Rack: " + " ".join(self.rack)
 

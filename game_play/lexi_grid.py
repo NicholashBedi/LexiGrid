@@ -142,7 +142,7 @@ class LexiGrid:
         if self.current_player_idx == 0:
             self.turn += 1
    
-    def get_turn_bonuses(self, played_word: PlayedWord):
+    def get_turn_bonuses(self, played_word: PlayedWord) -> dict[int]:
         turn_bonuses = {}
         for row, col, _, is_played_letter in played_word.iterate_word_positions_and_is_played():
             if is_played_letter:
@@ -150,7 +150,7 @@ class LexiGrid:
                         self.board.get_tile(row, col).bonus
         return turn_bonuses
 
-    def get_scored_word_from_letter(self, row, col, is_horizontal, bonuses):
+    def get_scored_word_from_letter(self, row: int, col: int, is_horizontal: bool, bonuses):
         while row >= 0 and col >= 0 and self.board.get_tile(row, col).letter is not None:
             row, col = (row, col - 1) if is_horizontal else (row - 1, col)
         row, col = (row, col + 1) if is_horizontal else (row + 1, col)
@@ -322,6 +322,39 @@ class LexiGrid:
         # Should not reach here
         raise ValueError(f"❌ Invalid move action {move.action}. Try again - Should not be here - reached end of make_move()?")
         
+
+    def to_dict(self):
+        return {
+            "players": [player.to_dict() for player in self.players],
+            "board": self.board.to_dict(),
+            "tile_bag": self.tile_bag.to_dict(),
+            "turn": self.turn,
+            "current_player_idx": self.current_player_idx,
+            "previous_moves": [
+                move.to_dict() if move is not None else None
+                for move in self.previous_moves
+            ],
+            "last_turn_score": self.last_turn_score.to_dict() if self.last_turn_score else None
+        }
+
+    @classmethod
+    def from_dict(self, d: dict):
+        players = [Player.from_dict(p) for p in d.get("players", [])]
+        game = LexiGrid.__new__(LexiGrid)
+        game.board = Board.from_dict(d.get("board", {}), players=players)
+        game.tile_bag = TileBag.from_dict(d.get("tile_bag", {}))
+        game.dictionary = Dictionary()
+        game.players = players
+        Move.players = players
+        game.num_players = len(players)
+        game.turn = d.get("turn", 0)
+        game.current_player_idx = d.get("current_player_idx", 0)
+        game.previous_moves = []
+        for item in d.get("previous_moves", []):
+            game.previous_moves.append(Move.from_dict(item, players) if item else None)
+        last_turn_score = d.get("last_turn_score", None)
+        game.last_turn_score = TurnScore.from_dict(last_turn_score) if last_turn_score else None
+        return game
 
 if __name__ == "__main__":
     

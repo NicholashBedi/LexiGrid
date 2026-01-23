@@ -1,4 +1,5 @@
 import config
+from game_play.player import Player
 from game_play.tile import LexiGridTile
 from helper.text_output import center_colored_text
 
@@ -24,16 +25,16 @@ class Board:
             print(f"{i+1:2} | {row_display} |")
             print_bar()
 
-    def place_tile(self, row, col, letter, player, turn):
+    def place_tile(self, row: int, col: int, letter: str, player: Player, turn: int):
         return self.grid[row][col].place_tile(letter, player, turn)
     
-    def get_tile(self, row, col) -> LexiGridTile:
+    def get_tile(self, row: int, col: int) -> LexiGridTile:
         return self.grid[row][col]
     
-    def get_letter(self, row, col):
+    def get_letter(self, row: int, col: int) -> str:
         return self.get_tile(row, col).letter
 
-    def get_tile_info(self, row, col):
+    def get_tile_info(self, row: int, col: int) -> dict:
         tile = self.grid[row][col]
         return {
             "letter": tile.letter,
@@ -46,6 +47,31 @@ class Board:
         for row in self.grid:
             for tile in row:
                 tile.clear()
+
+    def to_dict(self):
+        return {
+            "grid": [
+                [tile.to_dict() for tile in row]
+                for row in self.grid
+            ]
+        }
+
+    @classmethod
+    def from_dict(self, d: dict, players: list[Player] | None = None):
+        player_lookup = {}
+        if players:
+            for player in players:
+                if player.email:
+                    player_lookup[player.email] = player
+                if player.name:
+                    player_lookup[player.name] = player
+
+        board = Board()
+        grid_data = d.get("grid", [])
+        for r, row in enumerate(grid_data):
+            for c, tile_data in enumerate(row):
+                board.grid[r][c] = LexiGridTile.from_dict(tile_data, player_lookup)
+        return board
 
     def load_state(self, state, placed_by=None, turn=None, empty_char="."):
         """

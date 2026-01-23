@@ -78,3 +78,36 @@ class TurnScore:
         self.is_bingo = False
         self.total_score = 0
         self.scored_words = {}
+
+    def to_dict(self):
+        return {
+            "total_score": self.total_score,
+            "move_action": self.move_action.value if self.move_action else None,
+            "turn": self.turn,
+            "scored_words": [
+                {"pos": pos, "word": word.to_dict()}
+                for pos, word in self.scored_words.items()
+            ],
+            "is_bingo": self.is_bingo,
+            "is_challenger": self.is_challenger,
+            "is_challenge_successful": self.is_challenge_successful
+        }
+
+    @classmethod
+    def from_dict(self, d: dict):
+        move_action = d.get("move_action", None)
+        move_action = MoveOptions(move_action) if move_action else None
+        score = TurnScore(
+            move_action=move_action,
+            turn=d.get("turn", 0),
+            is_challenger=d.get("is_challenger", None),
+            is_challenge_successful=d.get("is_challenge_successful", None),
+            prev_move_score=0
+        )
+        score.total_score = d.get("total_score", 0)
+        score.is_bingo = d.get("is_bingo", False)
+        score.scored_words = {}
+        for item in d.get("scored_words", []):
+            scored_word = ScoredWord.from_dict(item.get("word", {}))
+            score.scored_words[item.get("pos", scored_word.get_set_value())] = scored_word
+        return score

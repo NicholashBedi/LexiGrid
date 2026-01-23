@@ -1,7 +1,7 @@
 import config
 
 
-def two_d_to_one_d_coordinate(row, col):
+def two_d_to_one_d_coordinate(row: int, col: int) -> int:
         return row * config.BOARD_WIDTH + col
 
 # Returns row then column

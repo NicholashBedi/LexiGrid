@@ -33,17 +33,49 @@ class Word:
     
     def get_set_value(self):
         return (-1 if self.is_horizontal else 1) * two_d_to_one_d_coordinate(self.start_row, self.start_col)
+    
+    def base_to_dict(self):
+        return {
+            "word": self.word,
+            "start_row": self.start_row,
+            "start_col": self.start_col,
+            "is_horizontal": self.is_horizontal
+        }
+
+    def to_dict(self):
+        return self.base_to_dict()
+
+    @classmethod 
+    def base_from_dict(self, d: dict):
+        return Word(
+            word = d.get("word", ""),
+            start_row = d.get("start_row", 0),
+            start_col=d.get("start_col", 0),
+            is_horizontal = d.get("is_horizontal", True)
+        )
+
+    @classmethod
+    def from_dict(self, d: dict):
+        return Word.base_from_dict(d)
+        
 
 
 class ScoredWord(Word):
-    def __init__(self, word, start_row, start_col, is_horizontal, bonuses):
-        super().__init__(word, start_row, start_col, is_horizontal)
-        self.bonuses = bonuses
-        self.tile_scores_no_bonus = [config.LETTER_SCORES.get(letter) for letter in word]
+    def __init__(self, word: str | Word, start_row: int | None = None, start_col: int | None = None, is_horizontal: bool | None = None, bonuses=None):
+        if isinstance(word, Word):
+            bonuses = bonuses if bonuses is not None else {}
+            super().__init__(word.word, word.start_row, word.start_col, word.is_horizontal)
+        else:
+            if start_row is None or start_col is None or is_horizontal is None:
+                raise ValueError("start_row, start_col, and is_horizontal are required when word is a string")
+            bonuses = bonuses if bonuses is not None else {}
+            super().__init__(word, start_row, start_col, is_horizontal)
+        self.bonuses: dict[str, int] = bonuses
+        self.tile_scores_no_bonus: list[int] = [config.LETTER_SCORES.get(letter) for letter in self.word]
         self.tile_score_with_bonus, self.word_multipliers = self._apply_bonuses()
-        self.total_score = self._calculate_total_score()
+        self.total_score: int = self._calculate_total_score()
     
-    def _apply_bonuses(self):
+    def _apply_bonuses(self) -> tuple[list[int], list[int]]:
         tile_scores = self.tile_scores_no_bonus[:]
         word_multipliers = []
         for i, (row, col, _) in enumerate(self.iterate_word_positions()):
@@ -59,7 +91,7 @@ class ScoredWord(Word):
 
         return tile_scores, word_multipliers
 
-    def _calculate_total_score(self):
+    def _calculate_total_score(self) -> int:
         score = sum(self.tile_score_with_bonus)
         for multiplier in self.word_multipliers:
             score *= multiplier
@@ -76,11 +108,30 @@ class ScoredWord(Word):
         if self.word_multipliers:
             print(f"Multipliers: " + " ".join([f"* {mult}" for mult in self.word_multipliers]))
         print(f"Total Word Score: {self.total_score}")
+    
+    def to_dict(self):
+        base_dict = super().base_to_dict()
+        score_dict = {
+            "bonuses": self.bonuses
+        }
+        return base_dict | score_dict
+    
+    @classmethod 
+    def from_dict(self, d: dict):
+        w = Word.base_from_dict(d)
+        return ScoredWord(w, d.get("bonuses"))
 
 class PlayedWord(Word):
-    def __init__(self, word, start_row, start_col, is_horizontal):
-        super().__init__(word, start_row, start_col, is_horizontal)
-        self.is_played_tile: list[bool] = [True] * len(word) # True if this tile was played this turn
+    def __init__(self, word: str | Word, start_row: int | None = None, start_col: int | None = None, is_horizontal: bool | None = None, is_played_tile: list[bool] | None = None):
+        if isinstance(word, Word):
+            super().__init__(word.word, word.start_row, word.start_col, word.is_horizontal)
+        else:
+            if start_row is None or start_col is None or is_horizontal is None:
+                raise ValueError("start_row, start_col, and is_horizontal are required when word is a string")
+            super().__init__(word, start_row, start_col, is_horizontal)
+        self.is_played_tile: list[bool] = [True] * len(self.word)  # True if this tile was played this turn
+        if is_played_tile:
+            self.is_played_tile = is_played_tile
     
     def display_played_word_info(self):
         print(f"Word: {self.word}")
@@ -121,3 +172,17 @@ class PlayedWord(Word):
             row = self.start_row if self.is_horizontal else self.start_row + i
             col = self.start_col + i if self.is_horizontal else self.start_col
             yield row, col, self.word[i], self.is_played_tile[i]
+    
+    def to_dict(self):
+        return super().base_to_dict() | {
+            "is_played_tile" : self.is_played_tile
+        }
+    
+    @classmethod
+    def from_dict(self, d: dict) -> PlayedWord:
+        w = Word.base_from_dict(d)
+        return PlayedWord(w, is_played_tile=d.get("is_played_tile", None))
+
+    @classmethod
+    def from_dcit(self, d: dict) -> PlayedWord:
+        return PlayedWord.from_dict(d)

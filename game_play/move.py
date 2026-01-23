@@ -91,3 +91,40 @@ class Move:
     def set_challenge_result(self, challenge_result: bool, challenged_player: Player):
         self.is_challenge_successful = challenge_result
         self.challenged_player = challenged_player
+
+    def to_dict(self):
+        player_email = self.player.email if self.player and hasattr(self.player, "email") else None
+        challenged_email = None
+        if self.challenged_player and hasattr(self.challenged_player, "email"):
+            challenged_email = self.challenged_player.email
+        return {
+            "player_email": player_email,
+            "action": self.action.value if self.action else None,
+            "word_play": self.word_play.to_dict() if self.word_play else None,
+            "exchange_letters": self.exchange_letters[:],
+            "challenged_player_email": challenged_email,
+            "is_challenge_successful": self.is_challenge_successful,
+            "turn": self.turn
+        }
+
+    @classmethod
+    def from_dict(self, d: dict, players: list[Player]):
+        def resolve_player(identifier: str | None):
+            if not identifier:
+                return None
+            for p in players:
+                if p.email == identifier or p.name == identifier:
+                    return p
+            return None
+
+        move = Move()
+        move.player = resolve_player(d.get("player_email", None))
+        action = d.get("action", None)
+        move.action = MoveOptions(action) if action else None
+        word_play_data = d.get("word_play", None)
+        move.word_play = WordPlay.from_dict(word_play_data) if word_play_data else None
+        move.exchange_letters = list(d.get("exchange_letters", []))
+        move.challenged_player = resolve_player(d.get("challenged_player_email", None))
+        move.is_challenge_successful = d.get("is_challenge_successful", None)
+        move.turn = d.get("turn", -1)
+        return move
