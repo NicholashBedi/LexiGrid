@@ -5,17 +5,21 @@ from collections import defaultdict
 import config
 from game_play.scoring import TurnScore
 from game_play.tile import TileBag
-from game_play.word import PlayedWord, ScoredWord, ScoredChallenge
+from game_play.word import PlayedWord
 
 
 class Player:
     def __init__(self, email, name = None):
-        self.name = name if name else email
-        self.email = email
-        self.rack = []
-        self.score_history: list[list[ScoredWord, ScoredChallenge]] = []
-        self.current_score = 0
-        self.skip_next_turn = False
+        self.name: str = name if name else email
+        self.email: str = email
+        self.rack: list[str] = []
+        self.score_history: list[TurnScore] = []
+        self.current_score: int = 0
+        self.is_skip_next_turn: bool = False
+    
+    def is_player(self, identifier: str):
+        id = identifier.lower()
+        return self.email.lower() == id or self.name.lower() == id
     
     def _debug_add_many_letters(self):
         self.rack = []
@@ -23,7 +27,19 @@ class Player:
             self.rack.extend([chr(65+i)]*20)
     
     def refill_rack(self, tile_bag: TileBag):
-        self.rack.extend(tile_bag.draw_tiles(max(0, config.RACK_SIZE - len(self.rack))))
+        tiles_drawn = tile_bag.draw_tiles(max(0, config.RACK_SIZE - len(self.rack)))
+        self.rack.extend(tiles_drawn)
+        return tiles_drawn
+    
+    def does_player_have_letters(self, letters: list[str]):
+        rack_letters = defaultdict(int)
+        for letter in self.rack:
+            rack_letters[letter] += 1
+        for letter in letters:
+            if rack_letters[letter.upper()] <= 0:
+                return False
+            rack_letters[letter.upper()] -= 1
+        return True
 
     def does_player_have_correct_tiles(self, played_word: PlayedWord):
         rack_letters = defaultdict(int)
@@ -57,3 +73,9 @@ class Player:
 
     def __str__(self):
         return f"{self.name}'s Rack: " + " ".join(self.rack)
+
+    def __eq__(self, other):
+        if not isinstance(other, Player):
+            return False
+        return self.email == other.email and self.name == other.name
+        

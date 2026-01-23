@@ -176,7 +176,7 @@ class TestLexiGridChallenges(unittest.TestCase):
         self.assertGreater(initial_score, 0)
 
         self.assertEqual(game.make_move("CHALLENGE"), "next")
-        self.assertTrue(self.player_two.skip_next_turn)
+        self.assertTrue(self.player_two.is_skip_next_turn)
         self.assertEqual(game.previous_moves[0][0], "CHALLENGE")
         self.assertEqual(game.current_player_idx, 0)
         self.assertEqual(game.turn, 1)

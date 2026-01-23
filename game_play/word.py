@@ -6,7 +6,7 @@ from helper.generic import num_to_char, two_d_to_one_d_coordinate
 
 class Word:
     def __init__(self, word: str, start_row: int, start_col: int, is_horizontal: bool):
-        self.word = word
+        self.word = word.upper()
         self.start_row = start_row
         self.start_col = start_col
         self.is_horizontal = is_horizontal
