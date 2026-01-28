@@ -69,6 +69,8 @@ class Move:
             self.action = MoveOptions.PASS
         elif action_token in ["challenge", "ch", "chalenge"]:
             self.action = MoveOptions.CHALLENGE
+        elif self.action in ["save", "s", "svae","saev"]:
+            self.action = MoveOptions.SAVE
         elif action_token in ["exchange", "ex"]:
             self.action = MoveOptions.EXCHANGE
             if len(tokens) < 2:

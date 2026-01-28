@@ -19,6 +19,7 @@ def get_player_input(player: Player) -> Move:
                 "2. EXCHANGE <LETTERS> - Exchange letters from your rack.\n"
                 "   Example: \"EXCHANGE AEI\" would exchange the letters AEI from your rack.\n"
                 "3. PASS - Pass your turn.\n"
+                "5. SAVE - Saves the game"
                 "4. END - End the game.\n"
                 "5. <PLAYER_NAME> CHALLENGE - Challenge the previous player's word.\n"
                 )

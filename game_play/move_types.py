@@ -38,3 +38,4 @@ class MoveOptions(Enum):
     SKIP = "skip"
     EXCHANGE = "exchange"
     END = "end"
+    SAVE = "save"

@@ -1,5 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
+import json
+from pathlib import Path
 import random
 import string
 from typing import Optional, Tuple
@@ -286,7 +288,8 @@ class LexiGrid:
         self.next_turn()
         
     def make_move(self, move: Move) -> MoveResult:
-        self.previous_moves.append(move)
+        if move.action != MoveOptions.SAVE:
+            self.previous_moves.append(move)
         player_name =  self.players[self.current_player_idx].name
         
         if move.action == MoveOptions.SKIP:
@@ -308,6 +311,9 @@ class LexiGrid:
         
         if move.action == MoveOptions.EXCHANGE:
             return self.exchange_letters(move)
+        
+        if move.action == MoveOptions.SAVE:
+            return self.save_game()
 
         if move.action == MoveOptions.PLAY and move.word_play is not None:
             if not self.place_word(move):
@@ -321,7 +327,11 @@ class LexiGrid:
             return MoveResult.NEXT
         # Should not reach here
         raise ValueError(f"❌ Invalid move action {move.action}. Try again - Should not be here - reached end of make_move()?")
-        
+    
+    def save_game(self, file_path: Path ):
+        with open(file_path, "w", encoding="utf8") as save_file:
+            save_file.write(json.dumps(self.to_dict(), indent=2))
+        print(f"File saved to {file_path}")
 
     def to_dict(self):
         return {
