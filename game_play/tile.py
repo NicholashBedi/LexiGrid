@@ -1,8 +1,12 @@
 import random
+from typing import TYPE_CHECKING
+
 from colorama import Fore, Style, init
 
 import config
-from game_play.player import Player
+
+if TYPE_CHECKING:
+    from game_play.player import Player
 
 init(autoreset=True)
 
@@ -24,7 +28,7 @@ class LexiGridTile:
     def is_placeable(self) -> bool:
         return self.letter is None
 
-    def place_tile(self, letter: str | None, player: Player, turn: int) -> bool:
+    def place_tile(self, letter: str | None, player: str | None, turn: int) -> bool:
         if self.letter is not None:
             return False  # Tile already occupied
         self.letter = letter
@@ -49,7 +53,7 @@ class LexiGridTile:
         }
 
     @classmethod
-    def from_dict(self, d: dict, player_lookup: dict[str, Player] | None = None):
+    def from_dict(self, d: dict, player_lookup: dict[str, "Player"] | None = None):
         tile = LexiGridTile(d.get("bonus"))
         tile.letter = d.get("letter", None)
         placed_by = d.get("placed_by", None)

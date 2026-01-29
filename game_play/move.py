@@ -1,4 +1,5 @@
 
+from pathlib import Path
 from game_play.player import Player
 from game_play.move_types import WordPlay, MoveOptions
 
@@ -12,6 +13,7 @@ class Move:
         self.exchange_letters: list[str] = []
         self.challenged_player: Player | None = None
         self.is_challenge_successful: bool | None = None
+        self.output_loc: Path | None = None
         self.turn : int = -1
         if user_input:
             self.parse_move_input(user_input)
@@ -69,7 +71,9 @@ class Move:
             self.action = MoveOptions.PASS
         elif action_token in ["challenge", "ch", "chalenge"]:
             self.action = MoveOptions.CHALLENGE
-        elif self.action in ["save", "s", "svae","saev"]:
+        elif action_token in ["save", "s", "svae","saev"]:
+            if len(tokens) > 1:
+                self.output_loc = tokens[1]
             self.action = MoveOptions.SAVE
         elif action_token in ["exchange", "ex"]:
             self.action = MoveOptions.EXCHANGE

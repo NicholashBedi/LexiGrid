@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 import sys
 from game_play.lexi_grid import LexiGrid
 from game_play.move import Move
@@ -19,9 +21,9 @@ def get_player_input(player: Player) -> Move:
                 "2. EXCHANGE <LETTERS> - Exchange letters from your rack.\n"
                 "   Example: \"EXCHANGE AEI\" would exchange the letters AEI from your rack.\n"
                 "3. PASS - Pass your turn.\n"
-                "5. SAVE - Saves the game"
-                "4. END - End the game.\n"
-                "5. <PLAYER_NAME> CHALLENGE - Challenge the previous player's word.\n"
+                "4. <PLAYER_NAME> CHALLENGE - Challenge the previous player's word.\n"
+                "5. END - End the game.\n"
+                "6. SAVE <FILE_NAME> - Saves the game\n"
                 )
             return get_player_input(player)
         else:
@@ -31,16 +33,35 @@ def get_player_input(player: Player) -> Move:
                 print(f"Invalid move input: {ve}. Please try again.")
                 return get_player_input(player)
 
-def play_game():
-    """Runs the LexiGrid game loop."""
+def is_int(input: str):
+    try:
+        val = int(input)
+        return True
+    except:
+        return False
+
+def get_initial_input() -> LexiGrid:
     print("🎲 Welcome to LexiGrid! 🎲")
 
     # Create players
-    num_players = int(input("Enter number of players: "))
-    players = [Player(input(f"Enter name for Player {i+1}: ")) for i in range(num_players)]
+    first_input = input("Enter number of players or a filepath to load: ")
+    if is_int(first_input):
+        num_players = int()
+        players = [Player(input(f"Enter name for Player {i+1}: ")) for i in range(num_players)]
+        return LexiGrid(players)
+    else:
+        in_file = Path(first_input)
+        if not in_file.exists():
+            print(f"File does not exist: {in_file}")
+        with open(in_file, "r", encoding="utf8") as ifile:
+            text = ifile.read()
+            return LexiGrid.from_dict(json.loads(text))
 
-    # Initialize game
-    game = LexiGrid(players)
+
+def play_game():
+    """Runs the LexiGrid game loop."""
+    game = get_initial_input()
+
     while True:
         player = game.players[game.current_player_idx]
         print(f"{player.name}'s turn!")

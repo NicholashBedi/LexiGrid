@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 import config
-from game_play.player import Player
 from game_play.tile import LexiGridTile
 from helper.text_output import center_colored_text
+
+if TYPE_CHECKING:
+    from game_play.player import Player
 
 class Board:    
     def __init__(self):
@@ -25,8 +29,8 @@ class Board:
             print(f"{i+1:2} | {row_display} |")
             print_bar()
 
-    def place_tile(self, row: int, col: int, letter: str, player: Player, turn: int):
-        return self.grid[row][col].place_tile(letter, player, turn)
+    def place_tile(self, row: int, col: int, letter: str, player_name: str | None, turn: int):
+        return self.grid[row][col].place_tile(letter, player_name, turn)
     
     def get_tile(self, row: int, col: int) -> LexiGridTile:
         return self.grid[row][col]
@@ -49,15 +53,25 @@ class Board:
                 tile.clear()
 
     def to_dict(self):
-        return {
-            "grid": [
-                [tile.to_dict() for tile in row]
-                for row in self.grid
+        return {"grid": {
+            "board_width": config.BOARD_WIDTH,
+            "board_height": config.BOARD_HEIGHT,
+            "bonuses" : [
+                [tile.bonus for tile in row] for row in self.grid
+            ],
+            "letteres" : [
+                [tile.letter for tile in row] for row in self.grid
+            ],
+            "placed_by": [
+                [tile.placed_by for tile in row] for row in self.grid
+            ],
+            "turn_placed": [
+                [tile.turn_placed for tile in row] for row in self.grid
             ]
-        }
+        }}
 
     @classmethod
-    def from_dict(self, d: dict, players: list[Player] | None = None):
+    def from_dict(self, d: dict, players: list["Player"] | None = None):
         player_lookup = {}
         if players:
             for player in players:
@@ -67,9 +81,17 @@ class Board:
                     player_lookup[player.name] = player
 
         board = Board()
-        grid_data = d.get("grid", [])
-        for r, row in enumerate(grid_data):
-            for c, tile_data in enumerate(row):
+        grid_data = d.get("grid", {})
+        if grid_data.get("board_width", 0) != config.BOARD_WIDTH or grid_data.get("board_height", 0) != config.BOARD_HEIGHT:
+            raise ValueError("Config file does not conform with loaded board size.")
+        for r in range(config.BOARD_HEIGHT):
+            for c in range(config.BOARD_WIDTH):
+                tile_data = {
+                    "bonus":        grid_data["bonuses"][r][c],
+                    "letter":       grid_data["letteres"][r][c],
+                    "placed_by":    grid_data["placed_by"][r][c],
+                    "turn_placed":  grid_data["turn_placed"][r][c]
+                }
                 board.grid[r][c] = LexiGridTile.from_dict(tile_data, player_lookup)
         return board
 

@@ -129,7 +129,7 @@ class LexiGrid:
 
         for row, col, letter, is_placed_letter in played_word.iterate_word_positions_and_is_played():
             if is_placed_letter:
-                if not self.board.place_tile(row, col, letter, player, self.turn):
+                if not self.board.place_tile(row, col, letter, player.name, self.turn):
                     raise Exception("Placing letter overtop of another!")
 
         self.calculate_score(player, played_word, is_bingo)
@@ -313,7 +313,7 @@ class LexiGrid:
             return self.exchange_letters(move)
         
         if move.action == MoveOptions.SAVE:
-            return self.save_game()
+            return self.save_game(move.output_loc)
 
         if move.action == MoveOptions.PLAY and move.word_play is not None:
             if not self.place_word(move):
@@ -328,9 +328,11 @@ class LexiGrid:
         # Should not reach here
         raise ValueError(f"❌ Invalid move action {move.action}. Try again - Should not be here - reached end of make_move()?")
     
-    def save_game(self, file_path: Path ):
+    def save_game(self, file_path: Path | None ):
+        if not file_path:
+            file_path = "saved_game.json"
         with open(file_path, "w", encoding="utf8") as save_file:
-            save_file.write(json.dumps(self.to_dict(), indent=2))
+            save_file.write(json.dumps(self.to_dict()))
         print(f"File saved to {file_path}")
 
     def to_dict(self):
